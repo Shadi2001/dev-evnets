@@ -5,6 +5,7 @@ import BookEvent from "@/components/BookEvent";
 import {getSimilarEventBySlug} from "@/lib/actions/event.actions";
 import EventCard from "@/components/EventCard";
 import {EventAttrs} from "@/database";
+import {cacheLife} from "next/cache";
 
 
 const EventDetailItem=({icon,alt,label}:{icon:string; alt:string;label:string})=>(
@@ -35,52 +36,57 @@ const EventTags=({tags}:{tags:string[]})=>(
 
 
 const EventDEtails =async ({params}:{params: Promise<{slug:string}>}) => {
+        'use cache'
+    cacheLife('hours')
 
 
+    const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL;
+    const { slug } = await params;
 
-    const BASE_URL=process.env.NEXT_PUBLIC_BASE_URL
-    const {slug} = await params
-    const request=await fetch(`${BASE_URL}/api/events/${slug}`)
-    const {events}=await request.json()
-    const Booking=10;
+    const response = await fetch(`${BASE_URL}/api/events`);
+    if (!response.ok) return notFound();
 
-    const similarEvents :EventAttrs[] =await getSimilarEventBySlug(slug);
+    const { events } = await response.json();
 
-    if(!events) return notFound()
+    const event: EventAttrs | undefined = events.find((e: EventAttrs) => e.slug === slug);
+    if (!event) return notFound();
+
+    const Booking = 10;
+    const similarEvents: EventAttrs[] = await getSimilarEventBySlug(slug);
 
     return (
         <section id="event">
             <div className="header">
                 <h1>Event Description</h1>
-                <p> {events[0].description}</p>
+                <p> {event.description}</p>
             </div>
 
             <div className="details">
                 {/*Left Side - Event Content */}
                 <div className="content">
-                    <Image src={events[0].image} alt="Event Banner" width={800} height={800} />
+                    <Image src={event.image} alt="Event Banner" width={800} height={800} />
 
                     <section className="flex-col-gap-2">
                         <h2>Overview</h2>
-                        <p>{events[0].overview}</p>
+                        <p>{event.overview}</p>
                     </section>
 
                     <section className="flex-col-gap-2">
                         <h2>Event Details</h2>
-                        <EventDetailItem icon='/icons/calendar.svg' alt="calender" label={events[0].date}/>
-                        <EventDetailItem icon='/icons/clock.svg' alt="calender" label={events[0].time}/>
-                        <EventDetailItem icon='/icons/pin.svg' alt="calender" label={events[0].location}/>
-                        <EventDetailItem icon='/icons/mode.svg' alt="calender" label={events[0].mode}/>
-                        <EventDetailItem icon='/icons/audience.svg' alt="calender" label={events[0].audience}/>
+                        <EventDetailItem icon='/icons/calendar.svg' alt="calender" label={event.date}/>
+                        <EventDetailItem icon='/icons/clock.svg' alt="calender" label={event.time}/>
+                        <EventDetailItem icon='/icons/pin.svg' alt="calender" label={event.location}/>
+                        <EventDetailItem icon='/icons/mode.svg' alt="calender" label={event.mode}/>
+                        <EventDetailItem icon='/icons/audience.svg' alt="calender" label={event.audience}/>
                     </section>
-    <EventAgenda agendItems={events[0].agenda}/>
+    <EventAgenda agendItems={event.agenda}/>
 
                     <section className="flex-col-gap-2">
                     <h2>About The Organizer</h2>
-                        <p>{events[0].organizer}</p>
+                        <p>{event.organizer}</p>
                     </section>
 
-                    <EventTags tags={events[0].tags}  />
+                    <EventTags tags={event.tags}  />
 
                 </div>
 
@@ -98,7 +104,7 @@ const EventDEtails =async ({params}:{params: Promise<{slug:string}>}) => {
                     </p>
                 )}
 
-                <BookEvent />
+                <BookEvent eventId={event.eventId} slug={event.slug}/>
             </div>
     </aside>
             </div>
